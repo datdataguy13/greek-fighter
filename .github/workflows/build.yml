@@ -1,0 +1,76 @@
+# Runs the tests and builds every version of the game on each push to main.
+#  - The web build is published to GitHub Pages (play in a browser).
+#  - Pushing a tag like v1.0 also makes a Release with downloads for
+#    Mac, Linux and Raspberry Pi / RetroPie.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot and export templates
+        run: |
+          base=https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable
+          wget -q "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          wget -q "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q "Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          dest="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$dest"
+          unzip -q "Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mv templates/* "$dest/"
+          rm -rf templates *.zip *.tpz
+
+      - name: Run tests
+        run: |
+          godot --headless --path . --import >/dev/null 2>&1 || true
+          for t in test_combat test_sim test_story; do
+            godot --headless --path . --quit-after 20000 -s "res://tests/$t.gd"
+          done
+
+      - name: Export
+        run: sh tools/export.sh godot
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: greek-fighter
+          path: build/dist/*
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: build/web
+
+      - name: Make a release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/dist/*
+
+  pages:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+permissions:
+  contents: write

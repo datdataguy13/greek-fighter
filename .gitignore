@@ -1,0 +1,6 @@
+# Godot's cache (rebuilt on open)
+.godot/
+# Exported builds (made by tools/export.sh or the GitHub workflow)
+build/
+.DS_Store
+*.tmp
