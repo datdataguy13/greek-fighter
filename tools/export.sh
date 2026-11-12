@@ -8,6 +8,8 @@ cd "$(dirname "$0")/.."
 G="${1:-/Applications/Godot.app/Contents/MacOS/Godot}"
 rm -rf build
 mkdir -p build/web build/mac build/linux build/pi build/dist
+# Keep Godot from importing its own build output as project files.
+touch build/.gdignore
 "$G" --headless --path . --import >/dev/null 2>&1 || true
 "$G" --headless --path . --export-release "Web" build/web/index.html
 "$G" --headless --path . --export-release "macOS" "build/mac/Greek Fighter.zip"
