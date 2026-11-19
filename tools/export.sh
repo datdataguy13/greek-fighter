@@ -11,6 +11,10 @@ mkdir -p build/web build/mac build/linux build/pi build/dist
 # Keep Godot from importing its own build output as project files.
 touch build/.gdignore
 "$G" --headless --path . --import >/dev/null 2>&1 || true
+# Pre-render the soundtrack so the game doesn't synthesise it while running
+# (that stalls the single-threaded web build), then import the new .wav files.
+"$G" --headless --path . -s res://tools/bake_music.gd
+"$G" --headless --path . --import >/dev/null 2>&1 || true
 "$G" --headless --path . --export-release "Web" build/web/index.html
 "$G" --headless --path . --export-release "macOS" "build/mac/Greek Fighter.zip"
 "$G" --headless --path . --export-release "Linux" build/linux/greek-fighter.x86_64

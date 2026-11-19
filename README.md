@@ -87,6 +87,10 @@ the Acropolis, Oracle of Delphi, Cyclops' Cave.
   `scripts/audio/songs.gd` (the format is explained at the top of the file).
   `tools/music_check.gd` checks the songs and, with `MUSIC_OUT=<folder>`, saves
   each one as a `.wav` to listen to.
+  Exported builds don't synthesise the music while running: `tools/export.sh`
+  first runs `tools/bake_music.gd`, which renders every song to
+  `assets/music/` (build output, not in git), and the game loads those. When
+  running from the editor without them, the game synthesises the songs itself.
 
 ## Tests and balance
 

@@ -4,14 +4,18 @@ extends Node
 # Chiptune soundtrack, synthesised from the note data in songs.gd, so the
 # project still ships no audio files.
 #
-# Rendering a song takes a moment in GDScript, so it is done a few
-# milliseconds per frame: the song that is wanted right now first, then the
-# rest in the background. Each finished song is a looping AudioStreamWAV.
+# Exported builds load the songs pre-rendered from assets/music/ (made by
+# tools/bake_music.gd at build time), so nothing is synthesised while playing.
+# Without those files (running from the editor), rendering a song takes a
+# moment in GDScript, so it is done a few milliseconds per frame: the song
+# that is wanted right now first, then the rest in the background. Each
+# finished song is a looping AudioStreamWAV.
 
 const RATE := 22050
 const VOLUME_DB := -7.0
 const MASTER := 0.72
 const SETTINGS := "user://settings.cfg"
+const BAKED := "res://assets/music"   # pre-rendered songs (tools/bake_music.gd)
 const GAIN := {"reed": 0.17, "square": 0.15, "lyre": 0.3, "arp": 0.13, "bass": 0.3, "D": 0.55, "t": 0.2, "s": 0.09}
 
 static var inst: Music
@@ -71,7 +75,26 @@ func _ready() -> void:
 		enabled = cfg.get_value("audio", "music", true)
 	player = AudioStreamPlayer.new()
 	add_child(player)
-	queue = Songs.ALL.keys()
+	# Exported builds carry the songs pre-rendered (tools/bake_music.gd); only
+	# songs without a baked file are synthesised here.
+	for id: String in Songs.ALL:
+		var wav := _load_baked(id)
+		if wav != null:
+			streams[id] = wav
+		else:
+			queue.append(id)
+
+
+static func _load_baked(id: String) -> AudioStreamWAV:
+	var path := BAKED.path_join(id + ".wav")
+	if not ResourceLoader.exists(path):
+		return null
+	var wav := load(path) as AudioStreamWAV
+	if wav != null and Songs.ALL[id].get("loop", true):
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_begin = 0
+		wav.loop_end = roundi(wav.get_length() * wav.mix_rate)
+	return wav
 
 
 func _process(delta: float) -> void:
